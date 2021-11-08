@@ -1,0 +1,16 @@
+{
+  "name": "screen-recorder",
+  "version": "1.0.0",
+  "description": "screen recorder using javascript and tailwind css",
+  "main": "index.js",
+  "scripts": {
+    "dev": "live-server . --no-css-inject",
+    "css": "tailwindcss -i src/tailwind.css -o dist/main.css --watch"
+  },
+  "author": "Peter (code giants)",
+  "license": "ISC",
+  "devDependencies": {
+    "live-server": "^1.2.1",
+    "tailwindcss": "^2.2.19"
+  }
+}

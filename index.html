@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Recording</title>
+    <link rel="stylesheet" href="./dist/main.css" />
+</head>
+<body class="bg-gray-600 text-white">
+    <header class="bg-gray-900 fixed w-full">
+        <div class="container mx-auto flex justify-center items-center py-4">
+            <h1 class="text-2xl font-bold uppercase">Screen Recorder.</h1>
+        </div>
+    </header><br><br>
+    <main class="overflow-hidden">
+        <div class="container mx-auto py-8 px-4">
+            <h2 class="text-xl text-gray-200 uppercase font-light mb-4">Video Recorder</h2>
+
+            <video src="" autoplay class="video-feedback bg-black w-full mb-4 h-auto mb-8"></video>
+            <div class="flex justify-center items-center -mx-4 mb-8">
+                <button class="start-recording mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 
+                    p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50">
+                    Start Recording
+                </button>
+                <button class="stop-recording mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 
+                    p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50" disabled>
+                    Stop Recording
+                </button>
+            </div>
+
+            <div class="recorded-video-wrap hidden">
+                <h2 class="text-xl text-gray-200 uppercase font-light mb-4">Download Video</h2>
+                <video src="" controls class="recorded-video bg-black mb-4 w-full h-auto"></video>
+
+                <div class="flex justify-center items-center -mx-4">
+                    <a href="" class="download-record text-center mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 
+                        p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50" aria-disabled="true" disabled>
+                        Download Recorded Video.
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="./dist/main.js"></script>
+</body>
+</html>
