@@ -1,48 +1,433 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Screen Recording</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlickCast - Professional Screen Recording</title>
     <link rel="stylesheet" href="./dist/main.css" />
-</head>
-<body class="bg-gray-600 text-white">
-    <header class="bg-gray-900 fixed w-full">
-        <div class="container mx-auto flex justify-center items-center py-4">
-            <h1 class="text-2xl font-bold uppercase">Screen Recorder.</h1>
-        </div>
-    </header><br><br>
-    <main class="overflow-hidden">
-        <div class="container mx-auto py-8 px-4">
-            <h2 class="text-xl text-gray-200 uppercase font-light mb-4">Video Recorder</h2>
+    <!-- Add after main.css -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
 
-            <video src="" autoplay class="video-feedback bg-black w-full mb-4 h-auto mb-8"></video>
-            <div class="flex justify-center items-center -mx-4 mb-8">
-                <button class="start-recording mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 
-                    p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50">
-                    Start Recording
+    <script type="module" src="./dist/main.js"></script>
+    <style>
+      #loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+        display: none;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* New styles for sidebar layout */
+      .sidebar {
+        width: 280px;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        background-color: #1a1a1a;
+        border-right: 1px solid #2d2d2d;
+        overflow-y: auto;
+        transition: transform 0.3s ease;
+      }
+
+      .main-content {
+        margin-left: 280px;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      /* Mobile responsive styles */
+      @media (max-width: 768px) {
+        .sidebar {
+          transform: translateX(-100%);
+          z-index: 50;
+        }
+
+        .sidebar.active {
+          transform: translateX(0);
+        }
+
+        .main-content {
+          margin-left: 0;
+        }
+
+        .mobile-menu-btn {
+          display: block;
+        }
+      }
+
+      /* New component styles */
+      .brand {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid #2d2d2d;
+      }
+
+      .nav-item {
+        padding: 0.75rem 1.5rem;
+        width: 100%;
+        margin: 0.5rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .nav-item:hover {
+        background-color: #2d2d2d;
+      }
+
+      .subscription-card {
+        background-color: #2d2d2d;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin: 1rem;
+      }
+
+      .feature-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.5rem 0;
+      }
+
+      /* New button styles */
+      .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        transition: opacity 0.2s;
+      }
+
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-white">
+    <!-- Mobile Menu Button -->
+    <button
+      class="mobile-menu-btn fixed top-4 right-4 z-50 lg:hidden bg-gray-800 p-2 rounded-lg"
+    >
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 6h16M4 12h16m-7 6h7"
+        ></path>
+      </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <aside class="sidebar overflow-y-hidden">
+      <div class="brand">
+        <h1 class="text-2xl font-bold">FlickCast</h1>
+      </div>
+
+      <!-- User Profile -->
+      <div class="p-4 border-b border-gray-700">
+        <div id="user-profile" class="flex items-center gap-3">
+          <div
+            id="premium-badge"
+            class="hidden bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-2 py-1 rounded-full text-sm font-medium"
+          >
+            PREMIUM
+          </div>
+          <button id="auth-button" class="btn-primary w-full">Login</button>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="py-4">
+        <div class="nav-item" onclick="toggleDashboard()">
+          <span>Dashboard</span>
+        </div>
+        <div class="nav-item" onclick="toggleRecording()">
+          <span>Record Screen</span>
+        </div>
+        <div class="nav-item"  href="./contact.html">
+          <span>Contact us</span>
+        </div>
+        <div class="nav-item" href="./privacy.html">
+          <span>Privacy Policy</span>
+        </div>
+      </nav>
+
+      <!-- Subscription Plans -->
+      <div class="subscription-card">
+        <h3 class="text-lg font-semibold mb-4">Upgrade to Premium</h3>
+        <ul class="feature-list mb-4">
+          <li class="feature-item">
+            <svg
+              class="w-5 h-5 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              ></path>
+            </svg>
+            <span>Unlimited Recording Time</span>
+          </li>
+          <li class="feature-item">
+            <svg
+              class="w-5 h-5 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              ></path>
+            </svg>
+            <span>No Watermark</span>
+          </li>
+          <li class="feature-item">
+            <svg
+              class="w-5 h-5 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              ></path>
+            </svg>
+            <span>Cloud Storage</span>
+          </li>
+        </ul>
+        <button
+          onclick="handleSubscribe('price_123')"
+          class="btn-primary w-full mb-2"
+        >
+          Subscribe with Stripe
+        </button>
+        <button
+          onclick="paystackHandler('monthly')"
+          class="bg-green-600 w-full p-3 rounded-lg hover:bg-green-700"
+        >
+          Pay with Paystack
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div id="loader"></div>
+
+      <!-- Recording Section -->
+      <section id="recording-section" class="max-w-4xl mx-auto">
+        <h2 class="text-2xl font-bold mb-6">Screen Recording</h2>
+
+        <video
+          src=""
+          autoplay
+          class="video-feedback bg-black w-full h-auto rounded-lg mb-8"
+        ></video>
+
+        <div class="flex gap-4 mb-8">
+          <button class="start-recording text-sm btn-primary flex-1">
+            Start Recording
+          </button>
+          <button class="stop-recording text-sm btn-primary flex-1" disabled>
+            Stop Recording
+          </button>
+        </div>
+
+        <div class="recorded-video-wrap hidden">
+          <h2 class="text-xl text-gray-200 uppercase font-light mb-4">
+            Download Video
+          </h2>
+          <video
+            src=""
+            controls
+            class="recorded-video bg-black mb-4 w-full h-auto"
+          ></video>
+
+          <div class="flex justify-center items-center -mx-4">
+            <a
+              href=""
+              class="download-record text-center mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50"
+              aria-disabled="true"
+              disabled
+            >
+              Download Recorded Video.
+            </a>
+          </div>
+
+          <!-- Add after download button -->
+          <div class="edit-tools mt-8 hidden">
+            <h3 class="text-xl text-gray-200 mb-4">Editing Tools</h3>
+
+            <!-- Trim Controls -->
+            <div class="trim-controls mb-6">
+              <label class="block mb-2">Trim Video (seconds):</label>
+              <div class="flex gap-4">
+                <input
+                  type="number"
+                  id="trim-start"
+                  class="bg-gray-700 text-white px-2 py-1 rounded w-20"
+                  placeholder="Start"
+                />
+                <input
+                  type="number"
+                  id="trim-end"
+                  class="bg-gray-700 text-white px-2 py-1 rounded w-20"
+                  placeholder="End"
+                />
+                <button
+                  onclick="applyTrim()"
+                  class="bg-blue-500 px-4 py-2 rounded"
+                >
+                  Apply Trim
                 </button>
-                <button class="stop-recording mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 
-                    p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50" disabled>
-                    Stop Recording
-                </button>
+              </div>
             </div>
 
-            <div class="recorded-video-wrap hidden">
-                <h2 class="text-xl text-gray-200 uppercase font-light mb-4">Download Video</h2>
-                <video src="" controls class="recorded-video bg-black mb-4 w-full h-auto"></video>
-
-                <div class="flex justify-center items-center -mx-4">
-                    <a href="" class="download-record text-center mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 
-                        p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50" aria-disabled="true" disabled>
-                        Download Recorded Video.
-                    </a>
-                </div>
+            <!-- Text Overlay -->
+            <div class="text-overlay mb-6">
+              <label class="block mb-2">Add Text Overlay:</label>
+              <div class="flex gap-4">
+                <input
+                  type="text"
+                  id="overlay-text"
+                  class="bg-gray-700 text-white px-2 py-1 rounded flex-1"
+                  placeholder="Enter text"
+                />
+                <button
+                  onclick="addTextOverlay()"
+                  class="bg-blue-500 px-4 py-2 rounded"
+                >
+                  Add Text
+                </button>
+              </div>
             </div>
+
+            <!-- Export Options -->
+            <div class="export-options">
+              <label class="block mb-2">Export Format:</label>
+              <select
+                id="export-format"
+                class="bg-gray-700 text-white px-2 py-1 rounded"
+              >
+                <option value="mp4">MP4</option>
+                <option value="gif">GIF</option>
+                <option value="webm">WebM</option>
+              </select>
+              <button
+                onclick="exportVideo()"
+                class="ml-4 bg-green-500 px-4 py-2 rounded"
+              >
+                Export Video
+              </button>
+            </div>
+          </div>
+
+          <!-- Add after export button -->
+          <div class="cloud-actions mt-6">
+            <button
+              onclick="saveToCloud()"
+              class="bg-purple-500 px-4 py-2 rounded mr-4"
+            >
+              Save to Cloud
+            </button>
+            <button
+              onclick="generateShareLink()"
+              class="bg-blue-500 px-4 py-2 rounded"
+            >
+              Generate Share Link
+            </button>
+            <div id="share-link" class="mt-4 hidden"></div>
+          </div>
         </div>
+      </section>
+
+      <!-- Dashboard Section -->
+      <section id="dashboard" class="hidden max-w-4xl mx-auto">
+        <h2 class="text-2xl font-bold mb-6">Your Dashboard</h2>
+
+        <div class="grid gap-6">
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl mb-4">Subscription Status</h3>
+            <p>Plan: <span id="plan-status">Free</span></p>
+            <button onclick="manageSubscription()" class="btn-primary mt-4">
+              Manage Subscription
+            </button>
+          </div>
+
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl mb-4">Recording History</h3>
+            <div id="history-list" class="grid gap-4"></div>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <script src="./dist/main.js"></script>
-</body>
+    <script>
+      // Mobile menu toggle
+      document
+        .querySelector(".mobile-menu-btn")
+        .addEventListener("click", () => {
+          document.querySelector(".sidebar").classList.toggle("active");
+        });
+
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener("click", (e) => {
+        if (
+          window.innerWidth <= 768 &&
+          !e.target.closest(".sidebar") &&
+          !e.target.closest(".mobile-menu-btn")
+        ) {
+          document.querySelector(".sidebar").classList.remove("active");
+        }
+      });
+    </script>
+
+    <script>
+      window.va =
+        window.va ||
+        function () {
+          (window.vaq = window.vaq || []).push(arguments);
+        };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </body>
 </html>
