@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - FlickCast</title>
+    <link rel="stylesheet" href="./dist/main.css" />
+    <style>
+        /* Reuse your existing styles */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background-color: #1a1a1a;
+            border-right: 1px solid #2d2d2d;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* Contact form specific styles */
+        .contact-form {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #2d2d2d;
+            padding: 2rem;
+            border-radius: 0.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #1a1a1a;
+            border: 1px solid #3d3d3d;
+            border-radius: 0.5rem;
+            color: white;
+            margin-top: 0.5rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2DD4BF;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- Reuse your sidebar component -->
+    <aside class="sidebar overflow-y-hidden">
+        <div class="brand">
+            <h1 class="text-2xl font-bold">FlickCast</h1>
+        </div>
+
+        <!-- User Profile -->
+        <div class="p-4 border-b border-gray-700">
+            <div id="user-profile" class="flex items-center gap-3">
+                <div id="premium-badge" class="hidden bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-2 py-1 rounded-full text-sm font-medium">
+                    PREMIUM
+                </div>
+                <button id="auth-button" class="btn-primary w-full">Login</button>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="py-4">
+            <div class="nav-item" onclick="toggleDashboard()">
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item" onclick="toggleRecording()">
+                <span>Record Screen</span>
+            </div>
+            <a href="/contact.html" class="nav-item block">
+                <span>Contact</span>
+            </a>
+            <a href="/privacy.html" class="nav-item block">
+                <span>Privacy Policy</span>
+            </a>
+        </nav>
+
+        <!-- Subscription Plans -->
+        <div class="subscription-card">
+            <h3 class="text-lg font-semibold mb-4">Upgrade to Premium</h3>
+            <ul class="feature-list mb-4">
+                <li class="feature-item">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Unlimited Recording Time</span>
+                </li>
+                <li class="feature-item">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>No Watermark</span>
+                </li>
+                <li class="feature-item">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Cloud Storage</span>
+                </li>
+            </ul>
+            <button onclick="handleSubscribe('price_123')" class="btn-primary w-full mb-2">
+                Subscribe with Stripe
+            </button>
+            <button onclick="paystackHandler('monthly')" class="bg-green-600 w-full p-3 rounded-lg hover:bg-green-700">
+                Pay with Paystack
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold mb-8">Contact Us</h1>
+            
+            <div class="contact-form">
+                <form action="https://formspree.io/f/your-form-id" method="POST">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <input type="text" id="subject" name="subject" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5" class="form-input" required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary w-full">Send Message</button>
+                </form>
+            </div>
+
+            <div class="mt-12 grid gap-8 md:grid-cols-2">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-4">Contact Information</h3>
+                    <p class="mb-2">Email: peterglo2200@gmail.com</p>
+                    <p class="mb-2">Phone: +2349066730090</p>
+                    <p>Website: <a href="https://flickcast.vercel.app" class="text-blue-400 hover:text-blue-300">flickcast.vercel.app</a></p>
+                </div>
+                
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-4">Office Hours</h3>
+                    <p class="mb-2">Monday - Friday: 9:00 AM - 6:00 PM</p>
+                    <p>Saturday - Sunday: Closed</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html> 

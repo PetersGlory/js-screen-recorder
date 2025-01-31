@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - FlickCast</title>
+    <link rel="stylesheet" href="./dist/main.css" />
+    <style>
+        /* Reuse your existing styles */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background-color: #1a1a1a;
+            border-right: 1px solid #2d2d2d;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* Privacy policy specific styles */
+        .privacy-content {
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .privacy-content h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+        .privacy-content h2 { font-size: 2rem; margin: 2rem 0 1rem; }
+        .privacy-content h3 { font-size: 1.5rem; margin: 1.5rem 0 1rem; }
+        .privacy-content h4 { font-size: 1.25rem; margin: 1.25rem 0 1rem; }
+        
+        .privacy-content p { margin-bottom: 1rem; }
+        .privacy-content ul { margin: 1rem 0; padding-left: 2rem; }
+        .privacy-content li { margin-bottom: 0.5rem; }
+        
+        .privacy-content a {
+            color: #2DD4BF;
+            text-decoration: underline;
+        }
+
+        .privacy-content a:hover {
+            color: #EC4899;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- Reuse your sidebar component -->
+    <aside class="sidebar overflow-y-hidden">
+        <div class="brand">
+            <h1 class="text-2xl font-bold">FlickCast</h1>
+        </div>
+        <!-- Navigation -->
+        <nav class="py-4">
+            <a href="/" class="nav-item block">
+                <span>Home</span>
+            </a>
+            <a href="/contact.html" class="nav-item block">
+                <span>Contact</span>
+            </a>
+            <a href="/privacy.html" class="nav-item block">
+                <span>Privacy Policy</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="privacy-content">
+            <!-- Your privacy policy content goes here -->
+            [Your provided privacy policy content]
+        </div>
+    </main>
+
+    <!-- Add the necessary scripts -->
+    <script type="module" src="./dist/main.js"></script>
+    <script>
+        // Mobile menu toggle
+        document.querySelector('.mobile-menu-btn')?.addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('active');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 &&
+                !e.target.closest('.sidebar') &&
+                !e.target.closest('.mobile-menu-btn')) {
+                document.querySelector('.sidebar').classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html> 
