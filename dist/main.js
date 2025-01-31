@@ -1,9 +1,16 @@
-
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { 
+    collection, 
+    doc, 
+    getDoc, 
+    getDocs, 
+    query, 
+    where, 
+    orderBy 
+} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -64,15 +71,19 @@ const loadDashboard = async () => {
     showLoader();
     try {
         // Load subscription status
-        const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+        const userDocRef = doc(db, 'users', auth.currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
         document.getElementById('plan-status').textContent = 
-            userDoc.data().isPremium ? "Premium" : "Free";
+            userDoc.data()?.isPremium ? "Premium" : "Free";
 
         // Load recordings
-        const snapshot = await db.collection('recordings')
-            .where('uid', '==', auth.currentUser.uid)
-            .orderBy('timestamp', 'desc')
-            .get();
+        const recordingsRef = collection(db, 'recordings');
+        const q = query(
+            recordingsRef,
+            where('uid', '==', auth.currentUser.uid),
+            orderBy('timestamp', 'desc')
+        );
+        const snapshot = await getDocs(q);
             
         const historyList = document.getElementById('history-list');
         historyList.innerHTML = '';
@@ -195,13 +206,18 @@ const handleSubscribe = async (planId) => {
 
 // Update the premium check to include subscription handling
 const checkPremiumStatus = async (uid) => {
-    const doc = await db.collection('users').doc(uid).get();
-    isPremiumUser = doc.data()?.isPremium || false;
-    premiumBadge.classList.toggle('hidden', !isPremiumUser);
-    
-    if (!isPremiumUser) {
-        initializeAds();
-        startRecordingTimer();
+    try {
+        const userDocRef = doc(db, 'users', uid);
+        const docSnap = await getDoc(userDocRef);
+        isPremiumUser = docSnap.data()?.isPremium || false;
+        premiumBadge.classList.toggle('hidden', !isPremiumUser);
+        
+        if (!isPremiumUser) {
+            initializeAds();
+            startRecordingTimer();
+        }
+    } catch (err) {
+        console.error('Error checking premium status:', err);
     }
 };
 
