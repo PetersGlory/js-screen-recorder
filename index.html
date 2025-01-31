@@ -75,8 +75,20 @@
       .brand {
         display: flex;
         align-items: center;
-        padding: 1.5rem;
+        padding: 1.2rem;
         border-bottom: 1px solid #2d2d2d;
+      }
+
+      .brand img {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+      }
+
+      .brand h1 {
+        margin-left: 0.75rem;
+        font-size: 1.5rem;
+        font-weight: 700;
       }
 
       .nav-item {
@@ -125,6 +137,12 @@
         opacity: 0.9;
       }
     </style>
+    <!-- Add these favicon links right after the meta tags -->
+    
+    <link rel="icon" href="./dist/img/logo-flick.jpg" />
+    <link rel="mask-icon" href="./dist/img/favicon/safari-pinned-tab.svg" color="#2DD4BF">
+    <meta name="msapplication-TileColor" content="#2DD4BF">
+    <meta name="theme-color" content="#2DD4BF">
   </head>
   <body class="bg-gray-900 text-white">
     <!-- Mobile Menu Button -->
@@ -149,7 +167,10 @@
     <!-- Sidebar -->
     <aside class="sidebar overflow-y-hidden">
       <div class="brand">
-        <h1 class="text-2xl font-bold">FlickCast</h1>
+        <div class="flex items-center gap-3">
+          <img src="./dist/img/logo-flick.jpg" alt="FlickCast Logo" class="w-10 h-10" />
+          <h1 class="text-2xl font-bold">FlickCast</h1>
+        </div>
       </div>
 
       <!-- User Profile -->

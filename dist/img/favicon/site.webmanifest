@@ -1,0 +1,19 @@
+{
+    "name": "FlickCast",
+    "short_name": "FlickCast",
+    "icons": [
+        {
+            "src": "/dist/img/favicon/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/dist/img/favicon/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#2DD4BF",
+    "background_color": "#1a1a1a",
+    "display": "standalone"
+} 
