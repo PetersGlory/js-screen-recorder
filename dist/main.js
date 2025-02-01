@@ -345,6 +345,10 @@ const startRecording = async () => {
             const blob = new Blob(chunks, { type: 'video/webm' });
             chunks = [];
             
+            // Show recorded video container
+            const videoContainer = document.querySelector('.recorded-video-container');
+            videoContainer.classList.remove('hidden');
+            
             const video = document.querySelector('.recorded-video');
             video.src = URL.createObjectURL(blob);
             video.style.width = '100%';
@@ -353,10 +357,36 @@ const startRecording = async () => {
             video.style.aspectRatio = `${settings.width / settings.height}`;
             
             currentBlob = blob;
+
+            // Show download and edit options
+            const editTools = document.querySelector('.edit-tools');
+            if (editTools) editTools.classList.remove('hidden');
+
+            // Add download button if it doesn't exist
+            if (!document.querySelector('.download-button')) {
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'download-button btn-primary mr-2';
+                downloadBtn.textContent = 'Download Recording';
+                downloadBtn.onclick = () => exportVideo('webm');
+                videoContainer.appendChild(downloadBtn);
+            }
+
+            // Add save to cloud button for logged in users
+            const { data: { user } } = await supabaseInstance.auth.getUser();
+            if (user && !document.querySelector('.save-cloud-button')) {
+                const saveCloudBtn = document.createElement('button');
+                saveCloudBtn.className = 'save-cloud-button btn-primary';
+                saveCloudBtn.textContent = 'Save to Cloud';
+                saveCloudBtn.onclick = saveToCloud;
+                videoContainer.appendChild(saveCloudBtn);
+            }
             
             // Clean up
             stream.getTracks().forEach(track => track.stop());
             audio.getTracks().forEach(track => track.stop());
+
+            // Scroll to recorded video
+            videoContainer.scrollIntoView({ behavior: 'smooth' });
         };
 
         recorder.start();
@@ -516,34 +546,39 @@ const saveToCloud = async () => {
     }
 }
 
-// Sharing functionality
+// Add this helper function for copying share link
+const copyShareLink = () => {
+    const shareUrl = document.getElementById('share-url');
+    shareUrl.select();
+    document.execCommand('copy');
+    alert('Link copied to clipboard!');
+};
+
+// Update generateShareLink function
 const generateShareLink = async () => {
-    if (!supabaseInstance.auth.getUser().then(data => data.data.user)) return alert('Please login first!');
+    const { data: { user } } = await supabaseInstance.auth.getUser();
+    if (!user) return alert('Please login first!');
     
     const blobToShare = editedBlob || currentBlob;
     if (!blobToShare) return;
 
     showLoader();
     try {
-        const storageRef = supabaseInstance.storage.from('recordings');
-        const shareRef = storageRef.child(
-            `shared/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.mp4`
-        );
+        const fileName = `shared/${user.id}/${Date.now()}.webm`;
+        const { error: uploadError } = await supabaseInstance.storage
+            .from('recordings')
+            .upload(fileName, blobToShare);
+            
+        if (uploadError) throw uploadError;
         
-        await shareRef.put(blobToShare);
-        const shareUrl = await shareRef.getDownloadURL();
-        
-        const shareDiv = document.getElementById('share-link');
-        shareDiv.innerHTML = `
-            <p class="mb-2">Shareable Link:</p>
-            <input type="text" value="${shareUrl}" 
-                   class="bg-gray-700 text-white px-2 py-1 rounded w-full mb-2" readonly>
-            <button onclick="navigator.clipboard.writeText('${shareUrl}')" 
-                    class="bg-gray-500 px-2 py-1 rounded">
-                Copy Link
-            </button>
-        `;
-        shareDiv.classList.remove('hidden');
+        const { data: { publicUrl } } = supabaseInstance.storage
+            .from('recordings')
+            .getPublicUrl(fileName);
+
+        const shareLink = document.getElementById('share-link');
+        const shareUrl = document.getElementById('share-url');
+        shareUrl.value = publicUrl;
+        shareLink.classList.remove('hidden');
     } catch (err) {
         alert('Sharing failed: ' + err.message);
     } finally {

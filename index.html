@@ -345,6 +345,71 @@
           ></video>
         </div>
 
+        <div class="edit-tools hidden">
+            <div class="bg-gray-800 p-4 rounded-lg mb-4">
+                <h3 class="text-lg font-semibold mb-4">Edit Recording</h3>
+                
+                <!-- Trim Controls -->
+                <div class="mb-4">
+                    <label class="block mb-2">Trim Video</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="trim-start" placeholder="Start Time (s)" 
+                            class="bg-gray-700 p-2 rounded flex-1">
+                        <input type="number" id="trim-end" placeholder="End Time (s)" 
+                            class="bg-gray-700 p-2 rounded flex-1">
+                        <button onclick="applyTrim()" class="btn-primary">Trim</button>
+                    </div>
+                </div>
+
+                <!-- Text Overlay -->
+                <div class="mb-4">
+                    <label class="block mb-2">Add Text Overlay</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="overlay-text" placeholder="Enter text" 
+                            class="bg-gray-700 p-2 rounded flex-1">
+                        <button onclick="addTextOverlay()" class="btn-primary">Add</button>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="mb-4">
+                    <label class="block mb-2">Export Options</label>
+                    <div class="flex gap-2">
+                        <select id="export-format" class="bg-gray-700 p-2 rounded flex-1">
+                            <option value="webm">WebM</option>
+                            <option value="mp4">MP4</option>
+                            <option value="gif">GIF</option>
+                        </select>
+                        <button onclick="exportVideo(document.getElementById('export-format').value)" 
+                            class="btn-primary">Export</button>
+                    </div>
+                </div>
+
+                <!-- Cloud Actions -->
+                <div class="flex gap-2">
+                    <button onclick="saveToCloud()" 
+                        class="btn-primary flex-1">
+                        Save to Cloud
+                    </button>
+                    <button onclick="generateShareLink()" 
+                        class="btn-primary flex-1">
+                        Generate Share Link
+                    </button>
+                </div>
+
+                <!-- Share Link Display -->
+                <div id="share-link" class="mt-4 hidden">
+                    <p class="mb-2">Shareable Link:</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="share-url" readonly
+                            class="bg-gray-700 p-2 rounded flex-1">
+                        <button onclick="copyShareLink()" 
+                            class="btn-primary">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="recorded-video-wrap hidden">
           <h2 class="text-xl text-gray-200 uppercase font-light mb-4">
             Download Video
@@ -356,86 +421,7 @@
             style="aspect-ratio: 16/9;"
           ></video>
 
-          <div class="flex justify-center items-center -mx-4">
-            <a
-              href=""
-              class="download-record text-center mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50"
-              aria-disabled="true"
-              disabled
-            >
-              Download Recorded Video.
-            </a>
-          </div>
-
           <!-- Add after download button -->
-          <div class="edit-tools mt-8 hidden">
-            <h3 class="text-xl text-gray-200 mb-4">Editing Tools</h3>
-
-            <!-- Trim Controls -->
-            <div class="trim-controls mb-6">
-              <label class="block mb-2">Trim Video (seconds):</label>
-              <div class="flex gap-4">
-                <input
-                  type="number"
-                  id="trim-start"
-                  class="bg-gray-700 text-white px-2 py-1 rounded w-20"
-                  placeholder="Start"
-                />
-                <input
-                  type="number"
-                  id="trim-end"
-                  class="bg-gray-700 text-white px-2 py-1 rounded w-20"
-                  placeholder="End"
-                />
-                <button
-                  onclick="applyTrim()"
-                  class="bg-blue-500 px-4 py-2 rounded"
-                >
-                  Apply Trim
-                </button>
-              </div>
-            </div>
-
-            <!-- Text Overlay -->
-            <div class="text-overlay mb-6">
-              <label class="block mb-2">Add Text Overlay:</label>
-              <div class="flex gap-4">
-                <input
-                  type="text"
-                  id="overlay-text"
-                  class="bg-gray-700 text-white px-2 py-1 rounded flex-1"
-                  placeholder="Enter text"
-                />
-                <button
-                  onclick="addTextOverlay()"
-                  class="bg-blue-500 px-4 py-2 rounded"
-                >
-                  Add Text
-                </button>
-              </div>
-            </div>
-
-            <!-- Export Options -->
-            <div class="export-options">
-              <label class="block mb-2">Export Format:</label>
-              <select
-                id="export-format"
-                class="bg-gray-700 text-white px-2 py-1 rounded"
-              >
-                <option value="mp4">MP4</option>
-                <option value="gif">GIF</option>
-                <option value="webm">WebM</option>
-              </select>
-              <button
-                onclick="exportVideo()"
-                class="ml-4 bg-green-500 px-4 py-2 rounded"
-              >
-                Export Video
-              </button>
-            </div>
-          </div>
-
-          <!-- Add after export button -->
           <div class="cloud-actions mt-6">
             <button
               onclick="saveToCloud()"
@@ -450,6 +436,17 @@
               Generate Share Link
             </button>
             <div id="share-link" class="mt-4 hidden"></div>
+          </div>
+
+          <div class="flex justify-center items-center -mx-4">
+            <a
+              href=""
+              class="download-record text-center mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50"
+              aria-disabled="true"
+              disabled
+            >
+              Download Recorded Video.
+            </a>
           </div>
         </div>
       </section>
