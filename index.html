@@ -10,6 +10,7 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script type="module" src="./dist/main.js"></script>
     <style>
@@ -136,15 +137,44 @@
       .btn-primary:hover {
         opacity: 0.9;
       }
+
+      .loader {
+        width: 48px;
+        height: 48px;
+        border: 5px solid #FFF;
+        border-bottom-color: #2DD4BF;
+        border-radius: 50%;
+        display: inline-block;
+        box-sizing: border-box;
+        animation: rotation 1s linear infinite;
+      }
+
+      @keyframes rotation {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
     </style>
     <!-- Add these favicon links right after the meta tags -->
-    
+
     <link rel="icon" href="./dist/img/logo-flick.jpg" />
-    <link rel="mask-icon" href="./dist/img/favicon/safari-pinned-tab.svg" color="#2DD4BF">
-    <meta name="msapplication-TileColor" content="#2DD4BF">
-    <meta name="theme-color" content="#2DD4BF">
+    <link
+      rel="mask-icon"
+      href="./dist/img/favicon/safari-pinned-tab.svg"
+      color="#2DD4BF"
+    />
+    <meta name="msapplication-TileColor" content="#2DD4BF" />
+    <meta name="theme-color" content="#2DD4BF" />
   </head>
   <body class="bg-gray-900 text-white">
+    <!-- Add this right after the opening body tag -->
+    <div id="global-loader" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="loader"></div>
+    </div>
+
     <!-- Mobile Menu Button -->
     <button
       class="mobile-menu-btn fixed top-4 right-4 z-50 lg:hidden bg-gray-800 p-2 rounded-lg"
@@ -168,7 +198,11 @@
     <aside class="sidebar overflow-y-hidden">
       <div class="brand">
         <div class="flex items-center gap-3">
-          <img src="./dist/img/logo-flick.jpg" alt="FlickCast Logo" class="w-10 h-10" />
+          <img
+            src="./dist/img/logo-flick.jpg"
+            alt="FlickCast Logo"
+            class="w-10 h-10"
+          />
           <h1 class="text-2xl font-bold">FlickCast</h1>
         </div>
       </div>
@@ -194,11 +228,11 @@
         <div class="nav-item" onclick="toggleRecording()">
           <span>Record Screen</span>
         </div>
-        <div class="nav-item"  href="./contact.html">
-          <span>Contact us</span>
+        <div class="nav-item">
+          <a href="./contact.html">Contact us</a>
         </div>
-        <div class="nav-item" href="./privacy.html">
-          <span>Privacy Policy</span>
+        <div class="nav-item">
+          <a href="./privacy.html">Privacy Policy</a>
         </div>
       </nav>
 
@@ -256,13 +290,13 @@
           </li>
         </ul>
         <button
-          onclick="handleSubscribe('price_123')"
+          onclick="window.handleSubscribe('price_123')"
           class="btn-primary w-full mb-2"
         >
           Subscribe with Stripe
         </button>
         <button
-          onclick="paystackHandler('monthly')"
+          onclick="window.paystackHandler('monthly')"
           class="bg-green-600 w-full p-3 rounded-lg hover:bg-green-700"
         >
           Pay with Paystack
@@ -278,19 +312,102 @@
       <section id="recording-section" class="max-w-4xl mx-auto">
         <h2 class="text-2xl font-bold mb-6">Screen Recording</h2>
 
+        <div class="recording-info bg-gray-800 p-4 rounded-lg mb-4">
+            <h3 class="text-lg font-semibold mb-2">Device Compatibility</h3>
+            <p class="text-gray-300">
+                💻 Desktop: Full screen recording supported<br>
+                📱 Mobile: Currently not supported (use native screen recording)
+            </p>
+        </div>
+
         <video
           src=""
           autoplay
-          class="video-feedback bg-black w-full h-auto rounded-lg mb-8"
+          class="video-feedback bg-black w-full rounded-lg mb-8"
+          style="aspect-ratio: 16/9;"
         ></video>
 
         <div class="flex gap-4 mb-8">
-          <button class="start-recording text-sm btn-primary flex-1">
+          <button class="start-recording btn-primary">
             Start Recording
           </button>
-          <button class="stop-recording text-sm btn-primary flex-1" disabled>
+          <button class="stop-recording btn-primary hidden">
             Stop Recording
           </button>
+        </div>
+
+        <div class="recorded-video-container hidden">
+          <video
+            src=""
+            controls
+            class="recorded-video bg-black w-full rounded-lg mb-8"
+            style="aspect-ratio: 16/9;"
+          ></video>
+        </div>
+
+        <div class="edit-tools hidden">
+            <div class="bg-gray-800 p-4 rounded-lg mb-4">
+                <h3 class="text-lg font-semibold mb-4">Edit Recording</h3>
+                
+                <!-- Trim Controls -->
+                <div class="mb-4">
+                    <label class="block mb-2">Trim Video</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="trim-start" placeholder="Start Time (s)" 
+                            class="bg-gray-700 p-2 rounded flex-1">
+                        <input type="number" id="trim-end" placeholder="End Time (s)" 
+                            class="bg-gray-700 p-2 rounded flex-1">
+                        <button onclick="applyTrim()" class="btn-primary">Trim</button>
+                    </div>
+                </div>
+
+                <!-- Text Overlay -->
+                <div class="mb-4">
+                    <label class="block mb-2">Add Text Overlay</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="overlay-text" placeholder="Enter text" 
+                            class="bg-gray-700 p-2 rounded flex-1">
+                        <button onclick="addTextOverlay()" class="btn-primary">Add</button>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="mb-4">
+                    <label class="block mb-2">Export Options</label>
+                    <div class="flex gap-2">
+                        <select id="export-format" class="bg-gray-700 p-2 rounded flex-1">
+                            <option value="webm">WebM</option>
+                            <option value="mp4">MP4</option>
+                            <option value="gif">GIF</option>
+                        </select>
+                        <button onclick="exportVideo(document.getElementById('export-format').value)" 
+                            class="btn-primary">Export</button>
+                    </div>
+                </div>
+
+                <!-- Cloud Actions -->
+                <div class="flex gap-2">
+                    <button onclick="saveToCloud()" 
+                        class="btn-primary flex-1">
+                        Save to Cloud
+                    </button>
+                    <button onclick="generateShareLink()" 
+                        class="btn-primary flex-1">
+                        Generate Share Link
+                    </button>
+                </div>
+
+                <!-- Share Link Display -->
+                <div id="share-link" class="mt-4 hidden">
+                    <p class="mb-2">Shareable Link:</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="share-url" readonly
+                            class="bg-gray-700 p-2 rounded flex-1">
+                        <button onclick="copyShareLink()" 
+                            class="btn-primary">Copy</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="recorded-video-wrap hidden">
@@ -300,89 +417,11 @@
           <video
             src=""
             controls
-            class="recorded-video bg-black mb-4 w-full h-auto"
+            class="recorded-video bg-black w-full rounded-lg mb-8"
+            style="aspect-ratio: 16/9;"
           ></video>
 
-          <div class="flex justify-center items-center -mx-4">
-            <a
-              href=""
-              class="download-record text-center mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50"
-              aria-disabled="true"
-              disabled
-            >
-              Download Recorded Video.
-            </a>
-          </div>
-
           <!-- Add after download button -->
-          <div class="edit-tools mt-8 hidden">
-            <h3 class="text-xl text-gray-200 mb-4">Editing Tools</h3>
-
-            <!-- Trim Controls -->
-            <div class="trim-controls mb-6">
-              <label class="block mb-2">Trim Video (seconds):</label>
-              <div class="flex gap-4">
-                <input
-                  type="number"
-                  id="trim-start"
-                  class="bg-gray-700 text-white px-2 py-1 rounded w-20"
-                  placeholder="Start"
-                />
-                <input
-                  type="number"
-                  id="trim-end"
-                  class="bg-gray-700 text-white px-2 py-1 rounded w-20"
-                  placeholder="End"
-                />
-                <button
-                  onclick="applyTrim()"
-                  class="bg-blue-500 px-4 py-2 rounded"
-                >
-                  Apply Trim
-                </button>
-              </div>
-            </div>
-
-            <!-- Text Overlay -->
-            <div class="text-overlay mb-6">
-              <label class="block mb-2">Add Text Overlay:</label>
-              <div class="flex gap-4">
-                <input
-                  type="text"
-                  id="overlay-text"
-                  class="bg-gray-700 text-white px-2 py-1 rounded flex-1"
-                  placeholder="Enter text"
-                />
-                <button
-                  onclick="addTextOverlay()"
-                  class="bg-blue-500 px-4 py-2 rounded"
-                >
-                  Add Text
-                </button>
-              </div>
-            </div>
-
-            <!-- Export Options -->
-            <div class="export-options">
-              <label class="block mb-2">Export Format:</label>
-              <select
-                id="export-format"
-                class="bg-gray-700 text-white px-2 py-1 rounded"
-              >
-                <option value="mp4">MP4</option>
-                <option value="gif">GIF</option>
-                <option value="webm">WebM</option>
-              </select>
-              <button
-                onclick="exportVideo()"
-                class="ml-4 bg-green-500 px-4 py-2 rounded"
-              >
-                Export Video
-              </button>
-            </div>
-          </div>
-
-          <!-- Add after export button -->
           <div class="cloud-actions mt-6">
             <button
               onclick="saveToCloud()"
@@ -397,6 +436,17 @@
               Generate Share Link
             </button>
             <div id="share-link" class="mt-4 hidden"></div>
+          </div>
+
+          <div class="flex justify-center items-center -mx-4">
+            <a
+              href=""
+              class="download-record text-center mx-4 flex-1 bg-gradient-to-br from-blue-400 to-yellow-400 p-2 uppercase text-xl font-bold transition duration-300 hover:opacity-90 disabled:opacity-50"
+              aria-disabled="true"
+              disabled
+            >
+              Download Recorded Video.
+            </a>
           </div>
         </div>
       </section>
@@ -422,6 +472,95 @@
       </section>
     </main>
 
+    <!-- Auth Modal -->
+    <div
+      id="auth-modal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden"
+    >
+      <div class="bg-gray-800 p-8 rounded-lg max-w-md w-full">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold" id="auth-modal-title">Login</h2>
+          <button class="close-modal text-gray-400 hover:text-white">
+            &times;
+          </button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="space-y-4">
+          <div>
+            <label for="login-email" class="block mb-2">Email</label>
+            <input
+              type="email"
+              id="login-email"
+              required
+              class="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label for="login-password" class="block mb-2">Password</label>
+            <input
+              type="password"
+              id="login-password"
+              required
+              class="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <button type="submit" class="btn-primary w-full">Login</button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="signup-form" class="space-y-4 hidden">
+          <div>
+            <label for="signup-email" class="block mb-2">Email</label>
+            <input
+              type="email"
+              id="signup-email"
+              required
+              class="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label for="signup-password" class="block mb-2">Password</label>
+            <input
+              type="password"
+              id="signup-password"
+              required
+              minlength="6"
+              class="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <button type="submit" class="btn-primary w-full">Sign Up</button>
+        </form>
+
+        <div class="mt-4 text-center">
+          <button
+            onclick="toggleAuthMode()"
+            class="text-blue-400 hover:text-blue-300"
+          >
+            <span id="auth-toggle-text">Don't have an account? Sign Up</span>
+          </button>
+        </div>
+
+        <div class="mt-4 flex items-center">
+          <div class="flex-1 border-t border-gray-600"></div>
+          <span class="px-4 text-gray-400">or</span>
+          <div class="flex-1 border-t border-gray-600"></div>
+        </div>
+
+        <button
+          onclick="signInWithGoogle()"
+          class="w-full mt-4 bg-white text-gray-900 py-2 px-4 rounded flex items-center justify-center gap-2 hover:bg-gray-100"
+        >
+          <img
+            src="https://www.google.com/favicon.ico"
+            alt="Google"
+            class="w-5 h-5"
+          />
+          Continue with Google
+        </button>
+      </div>
+    </div>
+
     <script>
       // Mobile menu toggle
       document
@@ -440,8 +579,25 @@
           document.querySelector(".sidebar").classList.remove("active");
         }
       });
-    </script>
+      function toggleAuthMode() {
+        const loginForm = document.getElementById("login-form");
+        const signupForm = document.getElementById("signup-form");
+        const modalTitle = document.getElementById("auth-modal-title");
+        const toggleText = document.getElementById("auth-toggle-text");
 
+        if (loginForm.classList.contains("hidden")) {
+          loginForm.classList.remove("hidden");
+          signupForm.classList.add("hidden");
+          modalTitle.textContent = "Login";
+          toggleText.textContent = "Don't have an account? Sign Up";
+        } else {
+          loginForm.classList.add("hidden");
+          signupForm.classList.remove("hidden");
+          modalTitle.textContent = "Sign Up";
+          toggleText.textContent = "Already have an account? Login";
+        }
+      }
+    </script>
     <script>
       window.va =
         window.va ||

@@ -1,32 +1,8 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-import { getStorage } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
-import { 
-    collection, 
-    doc, 
-    getDoc, 
-    getDocs, 
-    query, 
-    where, 
-    orderBy 
-} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyB70NsWSoqAK--V57XsoWov8V6whlVDu70",
-    authDomain: "flickcast-6fe9c.firebaseapp.com",
-    projectId: "flickcast-6fe9c",
-    storageBucket: "flickcast-6fe9c.firebasestorage.app",
-    messagingSenderId: "790285114908",
-    appId: "1:790285114908:web:d6ee2d00272f214d0209d9"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+// Supabase configuration
+const supabaseUrl = 'https://hqdwfwatvlsqkhuvifvo.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZHdmd2F0dmxzcWtodXZpZnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0MTUyMzAsImV4cCI6MjA1Mzk5MTIzMH0.jD6qQWUXat_SHZm5Ncq31vwZYj-ApExeIsab9hBhoo0'
+const { createClient } = supabase
+const supabaseInstance = createClient(supabaseUrl, supabaseKey)
 
 // Variables
 var stream = null,
@@ -66,73 +42,122 @@ const toggleDashboard = () => {
 };
 
 const loadDashboard = async () => {
-    if (!auth.currentUser) return;
+    const { data: { user } } = await supabaseInstance.auth.getUser()
+    if (!user) return
     
-    showLoader();
+    showLoader()
     try {
         // Load subscription status
-        const userDocRef = doc(db, 'users', auth.currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
+        const { data: profile, error: profileError } = await supabaseInstance
+            .from('profiles')
+            .select('is_premium')
+            .eq('id', user.id)
+            .single()
+            
+        if (profileError) throw profileError
+        
         document.getElementById('plan-status').textContent = 
-            userDoc.data()?.isPremium ? "Premium" : "Free";
+            profile?.is_premium ? "Premium" : "Free"
 
         // Load recordings
-        const recordingsRef = collection(db, 'recordings');
-        const q = query(
-            recordingsRef,
-            where('uid', '==', auth.currentUser.uid),
-            orderBy('timestamp', 'desc')
-        );
-        const snapshot = await getDocs(q);
+        const { data: recordings, error: recordingsError } = await supabaseInstance
+            .from('recordings')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
             
-        const historyList = document.getElementById('history-list');
-        historyList.innerHTML = '';
+        if (recordingsError) throw recordingsError
+            
+        const historyList = document.getElementById('history-list')
+        historyList.innerHTML = ''
         
-        snapshot.forEach(doc => {
-            const data = doc.data();
+        recordings.forEach(recording => {
             historyList.innerHTML += `
                 <div class="bg-gray-700 p-4 rounded">
-                    <p>Date: ${new Date(data.timestamp?.toDate()).toLocaleString()}</p>
-                    <p>Duration: ${data.duration} seconds</p>
-                    <a href="${data.url}" target="_blank" 
+                    <p>Date: ${new Date(recording.created_at).toLocaleString()}</p>
+                    <p>Duration: ${recording.duration} seconds</p>
+                    <a href="${recording.url}" target="_blank" 
                        class="text-blue-400 hover:text-blue-300">View Recording</a>
                 </div>
-            `;
-        });
+            `
+        })
     } catch (err) {
-        alert('Dashboard error: ' + err.message);
+        alert('Dashboard error: ' + err.message)
+    } finally {
+        hideLoader()
+    }
+}
+
+// Update auth state listener
+const checkUser = async () => {
+    showLoader();
+    try {
+        const { data: { user } } = await supabaseInstance.auth.getUser()
+        if (user) {
+            authButton.textContent = 'Logout'
+            await checkPremiumStatus(user.id)
+            await loadDashboard()
+        } else {
+            authButton.textContent = 'Login'
+            premiumBadge.classList.add('hidden')
+        }
+    } catch (err) {
+        console.error('Error checking user:', err)
     } finally {
         hideLoader();
     }
-};
-
-// Update auth state listener
-auth.onAuthStateChanged(user => {
-    if (user) {
-        authButton.textContent = 'Logout';
-        checkPremiumStatus(user.uid);
-        loadDashboard();
-    } else {
-        authButton.textContent = 'Login';
-        premiumBadge.classList.add('hidden');
-    }
-});
+}
 
 // Auth handler
 authButton.addEventListener('click', () => {
-    auth.currentUser ? auth.signOut() : signInWithGoogle();
-});
+    const authModal = document.getElementById('auth-modal')
+    authModal.classList.toggle('hidden')
+})
 
-// Enhanced setupStream with browser checks
+// Add this function to check device compatibility
+const checkDeviceCompatibility = () => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const recordButton = document.querySelector('.start-recording');
+    
+    if (isMobile) {
+        recordButton?.setAttribute('disabled', 'true');
+        recordButton?.classList.add('opacity-50', 'cursor-not-allowed');
+        
+        // Add warning message
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'bg-red-500 text-white p-4 rounded-lg mb-4';
+        warningDiv.innerHTML = `
+            <p class="font-bold">Device Not Supported</p>
+            <p>Screen recording is currently not supported on mobile browsers. Please use a desktop browser for this feature.</p>
+        `;
+        
+        document.querySelector('#recording-section')?.insertBefore(
+            warningDiv,
+            document.querySelector('.video-feedback')
+        );
+    }
+};
+
+// Update setupStream function to handle screen dimensions
 const setupStream = async () => {
     showLoader();
     try {
+        // Check if mobile device
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            throw new Error('Screen recording is not supported on mobile browsers. Please use a desktop browser.');
+        }
+
         if (!navigator.mediaDevices?.getDisplayMedia) {
             throw new Error('Screen recording not supported in this browser');
         }
 
+        // Request full screen dimensions
         stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { frameRate: 30 }
+            video: {
+                frameRate: 30,
+                width: { ideal: screen.width },
+                height: { ideal: screen.height }
+            }
         });
 
         audio = await navigator.mediaDevices.getUserMedia({
@@ -151,51 +176,78 @@ const setupStream = async () => {
     }
 };
 
+// Update setupVideoFeedback to maintain aspect ratio
 const setupVideoFeedback = () => {
     if (stream) {
         const video = document.querySelector('.video-feedback');
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
+        
+        // Set video element dimensions to match source
+        video.style.width = '100%';
+        video.style.maxWidth = '100%';
+        video.style.height = 'auto';
+        
+        // Set proper aspect ratio
+        const aspectRatio = settings.width / settings.height;
+        video.style.aspectRatio = `${aspectRatio}`;
+        
         video.srcObject = stream;
         video.play();
     } else {
-        console.warn("no stream variable")
+        console.warn("no stream variable");
     }
 }
 
 // Payment handlers
-const paystackHandler = (planId) => {
-    const user = auth.currentUser;
-    if (!user) {
-        alert('Please login first!');
-        return;
-    }
-    
-    const handler = PaystackPop.setup({
-        key: 'YOUR_PAYSTACK_PUBLIC_KEY',
-        email: user.email,
-        amount: 10000, // 100 NGN in kobo
-        currency: 'NGN',
-        callback: (response) => {
-            fetch('/.netlify/functions/confirm-payment', {
-                method: 'POST',
-                body: JSON.stringify({
-                    uid: user.uid,
-                    reference: response.reference
-                })
-            }).then(() => window.location.reload());
+window.paystackHandler = async (planId) => {
+    showLoader();
+    try {
+        const { data: { user } } = await supabaseInstance.auth.getUser()
+        if (!user) {
+            alert('Please login first!')
+            return
         }
-    });
-    handler.openIframe();
-};
+        
+        const handler = PaystackPop.setup({
+            key: 'YOUR_PAYSTACK_PUBLIC_KEY',
+            email: user.email,
+            amount: 10000,
+            currency: 'NGN',
+            callback: async (response) => {
+                showLoader();
+                try {
+                    const { error } = await supabaseInstance
+                        .from('profiles')
+                        .update({ is_premium: true })
+                        .eq('id', user.id)
+                    
+                    if (error) throw error
+                    window.location.reload()
+                } catch (err) {
+                    alert('Payment verification failed: ' + err.message)
+                } finally {
+                    hideLoader();
+                }
+            }
+        })
+        handler.openIframe()
+    } catch (err) {
+        alert('Payment setup failed: ' + err.message)
+    } finally {
+        hideLoader();
+    }
+}
 
-const handleSubscribe = async (planId) => {
-    const user = auth.currentUser;
+window.handleSubscribe = async (planId) => {
+    const { data: { user } } = await supabaseInstance.auth.getUser()
     if (!user) return alert('Please sign in first!');
 
     const response = await fetch('/.netlify/functions/create-stripe-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            uid: user.uid,
+            uid: user.id,
             planId: planId
         })
     });
@@ -205,21 +257,27 @@ const handleSubscribe = async (planId) => {
 };
 
 // Update the premium check to include subscription handling
-const checkPremiumStatus = async (uid) => {
+const checkPremiumStatus = async (userId) => {
     try {
-        const userDocRef = doc(db, 'users', uid);
-        const docSnap = await getDoc(userDocRef);
-        isPremiumUser = docSnap.data()?.isPremium || false;
-        premiumBadge.classList.toggle('hidden', !isPremiumUser);
+        const { data, error } = await supabaseInstance
+            .from('profiles')
+            .select('is_premium')
+            .eq('id', userId)
+            .single()
+            
+        if (error) throw error
+        
+        isPremiumUser = data?.is_premium || false
+        premiumBadge.classList.toggle('hidden', !isPremiumUser)
         
         if (!isPremiumUser) {
-            initializeAds();
-            startRecordingTimer();
+            initializeAds()
+            startRecordingTimer()
         }
     } catch (err) {
-        console.error('Error checking premium status:', err);
+        console.error('Error checking premium status:', err)
     }
-};
+}
 
 // Watermark implementation
 const addWatermark = (stream) => {
@@ -263,70 +321,86 @@ const addWatermark = (stream) => {
     return new MediaStream([generator, ...stream.getAudioTracks()]);
 };
 
-// Modified startRecording
+// Update startRecording function
 const startRecording = async () => {
-    await setupStream();
-    if (!stream) return;
+    try {
+        // Setup stream first
+        await setupStream();
+        if (!stream) return;
 
-    const processedStream = addWatermark(stream);
-    mixedStream = new MediaStream([
-        ...processedStream.getTracks(),
-        ...audio.getTracks()
-    ]);
+        // Get video track settings for dimensions
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
 
-    recorder = new MediaRecorder(mixedStream, {
-        mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 2500000
-    });
+        // Create mixed stream with proper dimensions
+        mixedStream = new MediaStream([...stream.getTracks(), ...audio.getTracks()]);
+        
+        recorder = new MediaRecorder(mixedStream, {
+            mimeType: 'video/webm;codecs=vp8,opus',
+            videoBitsPerSecond: 2500000, // 2.5 Mbps for better quality
+        });
 
-    recorder.ondataavailable = handleDataAvailable;
-    recorder.onstop = handleStop;
-    recorder.start(200);
+        recorder.ondataavailable = (e) => chunks.push(e.data);
+        recorder.onstop = async () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            chunks = [];
+            
+            // Show recorded video container
+            const videoContainer = document.querySelector('.recorded-video-container');
+            videoContainer.classList.remove('hidden');
+            
+            const video = document.querySelector('.recorded-video');
+            video.src = URL.createObjectURL(blob);
+            video.style.width = '100%';
+            video.style.maxWidth = '100%';
+            video.style.height = 'auto';
+            video.style.aspectRatio = `${settings.width / settings.height}`;
+            
+            currentBlob = blob;
 
-    startButton.disabled = true;
-    stopButton.disabled = false;
+            // Show download and edit options
+            const editTools = document.querySelector('.edit-tools');
+            if (editTools) editTools.classList.remove('hidden');
 
-    if (!isPremiumUser) {
-        startRecordingTimer();
+            // Add download button if it doesn't exist
+            if (!document.querySelector('.download-button')) {
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'download-button btn-primary mr-2';
+                downloadBtn.textContent = 'Download Recording';
+                downloadBtn.onclick = () => exportVideo('webm');
+                videoContainer.appendChild(downloadBtn);
+            }
+
+            // Add save to cloud button for logged in users
+            const { data: { user } } = await supabaseInstance.auth.getUser();
+            if (user && !document.querySelector('.save-cloud-button')) {
+                const saveCloudBtn = document.createElement('button');
+                saveCloudBtn.className = 'save-cloud-button btn-primary';
+                saveCloudBtn.textContent = 'Save to Cloud';
+                saveCloudBtn.onclick = saveToCloud;
+                videoContainer.appendChild(saveCloudBtn);
+            }
+            
+            // Clean up
+            stream.getTracks().forEach(track => track.stop());
+            audio.getTracks().forEach(track => track.stop());
+
+            // Scroll to recorded video
+            videoContainer.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        recorder.start();
+        startButton.classList.add('hidden');
+        stopButton.classList.remove('hidden');
+
+        // Start timer for non-premium users
+        if (!isPremiumUser) {
+            startRecordingTimer();
+        }
+    } catch (err) {
+        console.error('Error starting recording:', err);
+        alert('Failed to start recording: ' + err.message);
     }
-
-    console.log('recording started');
-};
-
-const handleDataAvailable = (e) => {
-    chunks.push(e.data);
-}
-
-const handleStop = () => {
-    const blob = new Blob(chunks, { 
-        type: "video/webm; codecs=vp9" // Update MIME type to match recording
-    });
-    chunks = [];
-    currentBlob = blob;
-
-    const url = URL.createObjectURL(blob);
-    downloadButton.href = url;
-    downloadButton.download = 'video.webm'; // Change extension to match format
-    downloadButton.disabled = false;
-
-    recordedVideo.src = url;
-    recordedVideo.load();
-    recordedVideo.onloadeddata = () => {
-        recordedVideo.play();
-        const rc = document.querySelector(".recorded-video-wrap");
-        rc.classList.remove("hidden");
-        document.querySelector('.edit-tools').classList.remove('hidden');
-        rc.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-    if (audio) {
-        audio.getTracks().forEach(track => track.stop());
-    }
-
-    console.log('recording ready');
 };
 
 // Recording time limit
@@ -343,12 +417,19 @@ const startRecordingTimer = () => {
     }, 1000);
 };
 
+// Update stopRecording function
 const stopRecording = () => {
-    if (recordingTimer) clearInterval(recordingTimer);
-    recorder.stop();
-    startButton.disabled = false;
-    stopButton.disabled = true;
-    console.log("Video stopped");
+    try {
+        if (recordingTimer) clearInterval(recordingTimer);
+        if (recorder && recorder.state !== 'inactive') {
+            recorder.stop();
+            startButton.classList.remove('hidden');
+            stopButton.classList.add('hidden');
+        }
+    } catch (err) {
+        console.error('Error stopping recording:', err);
+        alert('Failed to stop recording: ' + err.message);
+    }
 };
 
 // Ad initialization
@@ -368,8 +449,13 @@ const initializeAds = () => {
 };
 
 // Loader controls
-const showLoader = () => loader.style.display = 'block';
-const hideLoader = () => loader.style.display = 'none';
+const showLoader = () => {
+    document.getElementById('global-loader').classList.remove('hidden');
+}
+
+const hideLoader = () => {
+    document.getElementById('global-loader').classList.add('hidden');
+}
 
 // Update window load event listener
 window.addEventListener('load', () => {
@@ -390,11 +476,14 @@ window.addEventListener('load', () => {
         paystackButton.onclick = () => paystackHandler('basic_plan');
         document.querySelector('.absolute.top-4.right-4').appendChild(paystackButton);
     }
+
+    // Existing code...
+    checkDeviceCompatibility();
 });
 
 // Subscription management
 const manageSubscription = async () => {
-    if (!auth.currentUser) return alert('Please login first!');
+    if (!supabaseInstance.auth.getUser().then(data => data.data.user)) return alert('Please login first!');
 
     showLoader();
     try {
@@ -402,7 +491,7 @@ const manageSubscription = async () => {
             const response = await fetch('/.netlify/functions/create-portal-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: auth.currentUser.uid })
+                body: JSON.stringify({ uid: supabaseInstance.auth.getUser().then(data => data.data.user.id) })
             });
             const session = await response.json();
             window.location.href = session.url;
@@ -418,62 +507,78 @@ const manageSubscription = async () => {
 
 // Cloud save functionality
 const saveToCloud = async () => {
-    if (!auth.currentUser) return alert('Please login first!');
-    
-    const blobToSave = editedBlob || currentBlob;
-    if (!blobToSave) return;
-
-    showLoader();
-    try {
-        const storageRef = storage.ref();
-        const fileRef = storageRef.child(
-            `recordings/${auth.currentUser.uid}/${Date.now()}.mp4`
-        );
-        
-        await fileRef.put(blobToSave);
-        await db.collection('recordings').add({
-            uid: auth.currentUser.uid,
-            url: await fileRef.getDownloadURL(),
-            timestamp: app.firestore.FieldValue.serverTimestamp(),
-            duration: Math.floor((document.getElementById('trim-end').value || 300) - 
-                      (document.getElementById('trim-start').value || 0))
-        });
-        alert('Saved to cloud!');
-    } catch (err) {
-        alert('Cloud save failed: ' + err.message);
-    } finally {
-        hideLoader();
+    const { data: { user } } = await supabaseInstance.auth.getUser()
+    if (!user) {
+        alert('Please login to save recordings')
+        return
     }
+    
+    showLoader()
+    try {
+        const fileName = `recordings/${user.id}/${Date.now()}.webm`
+        const { error: uploadError } = await supabaseInstance.storage
+            .from('recordings')
+            .upload(fileName, currentBlob)
+            
+        if (uploadError) throw uploadError
+        
+        const { data: { publicUrl } } = supabaseInstance.storage
+            .from('recordings')
+            .getPublicUrl(fileName)
+            
+        const { error: dbError } = await supabaseInstance
+            .from('recordings')
+            .insert({
+                user_id: user.id,
+                url: publicUrl,
+                duration: recordedVideo.duration,
+                created_at: new Date().toISOString()
+            })
+            
+        if (dbError) throw dbError
+        
+        alert('Recording saved successfully!')
+        loadDashboard()
+    } catch (err) {
+        alert('Error saving recording: ' + err.message)
+    } finally {
+        hideLoader()
+    }
+}
+
+// Add this helper function for copying share link
+const copyShareLink = () => {
+    const shareUrl = document.getElementById('share-url');
+    shareUrl.select();
+    document.execCommand('copy');
+    alert('Link copied to clipboard!');
 };
 
-// Sharing functionality
+// Update generateShareLink function
 const generateShareLink = async () => {
-    if (!auth.currentUser) return alert('Please login first!');
+    const { data: { user } } = await supabaseInstance.auth.getUser();
+    if (!user) return alert('Please login first!');
     
     const blobToShare = editedBlob || currentBlob;
     if (!blobToShare) return;
 
     showLoader();
     try {
-        const storageRef = storage.ref();
-        const shareRef = storageRef.child(
-            `shared/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.mp4`
-        );
+        const fileName = `shared/${user.id}/${Date.now()}.webm`;
+        const { error: uploadError } = await supabaseInstance.storage
+            .from('recordings')
+            .upload(fileName, blobToShare);
+            
+        if (uploadError) throw uploadError;
         
-        await shareRef.put(blobToShare);
-        const shareUrl = await shareRef.getDownloadURL();
-        
-        const shareDiv = document.getElementById('share-link');
-        shareDiv.innerHTML = `
-            <p class="mb-2">Shareable Link:</p>
-            <input type="text" value="${shareUrl}" 
-                   class="bg-gray-700 text-white px-2 py-1 rounded w-full mb-2" readonly>
-            <button onclick="navigator.clipboard.writeText('${shareUrl}')" 
-                    class="bg-gray-500 px-2 py-1 rounded">
-                Copy Link
-            </button>
-        `;
-        shareDiv.classList.remove('hidden');
+        const { data: { publicUrl } } = supabaseInstance.storage
+            .from('recordings')
+            .getPublicUrl(fileName);
+
+        const shareLink = document.getElementById('share-link');
+        const shareUrl = document.getElementById('share-url');
+        shareUrl.value = publicUrl;
+        shareLink.classList.remove('hidden');
     } catch (err) {
         alert('Sharing failed: ' + err.message);
     } finally {
@@ -539,13 +644,12 @@ const addTextOverlay = async () => {
     }
 };
 
-const exportVideo = async () => {
-    const format = document.getElementById('export-format').value;
-    if (!editedBlob && !currentBlob) return;
+const exportVideo = async (format) => {
+    const blobToExport = editedBlob || currentBlob;
+    if (!blobToExport) return;
     
     showLoader();
     try {
-        const blobToExport = editedBlob || currentBlob;
         const url = URL.createObjectURL(blobToExport);
         const a = document.createElement('a');
         a.href = url;
@@ -580,22 +684,113 @@ document.addEventListener('DOMContentLoaded', () => {
         addTextOverlay,
         exportVideo,
         generateShareLink,
-        handleSubscribe,
-        paystackHandler,
         manageSubscription,
-        toggleRecording
+        toggleRecording,
+        signInWithGoogle
     });
+
+    // Login form handler
+    document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const email = document.getElementById('login-email').value
+        const password = document.getElementById('login-password').value
+        await signInWithEmail(email, password)
+        document.getElementById('auth-modal').classList.add('hidden')
+    })
+
+    // Signup form handler
+    document.getElementById('signup-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const email = document.getElementById('signup-email').value
+        const password = document.getElementById('signup-password').value
+        await signUpWithEmail(email, password)
+        document.getElementById('auth-modal').classList.add('hidden')
+    })
+
+    // Close modal button handler
+    document.querySelector('.close-modal')?.addEventListener('click', () => {
+        document.getElementById('auth-modal').classList.add('hidden')
+    })
+
+    // Export functions to window
+    Object.assign(window, {
+        toggleDashboard,
+        saveToCloud,
+        applyTrim,
+        addTextOverlay,
+        exportVideo,
+        generateShareLink,
+        manageSubscription,
+        toggleRecording,
+        signInWithGoogle,
+        signInWithEmail,
+        signUpWithEmail,
+        toggleAuthMode
+    })
 });
 
 // Add after Firebase initialization
 const signInWithGoogle = async () => {
+    showLoader();
     try {
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
+        const { data, error } = await supabaseInstance.auth.signInWithOAuth({
+            provider: 'google'
+        })
+        if (error) throw error
     } catch (err) {
-        console.error('Auth error:', err);
-        alert('Authentication failed: ' + err.message);
+        console.error('Auth error:', err)
+        alert('Authentication failed: ' + err.message)
+    } finally {
+        hideLoader();
     }
-};
+}
+
+// Add Supabase auth listener
+supabaseInstance.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN') {
+        checkUser()
+    } else if (event === 'SIGNED_OUT') {
+        authButton.textContent = 'Login'
+        premiumBadge.classList.add('hidden')
+    }
+})
+
+// Update the signInWithEmail function
+const signInWithEmail = async (email, password) => {
+    showLoader();
+    try {
+        const { data, error } = await supabaseInstance.auth.signInWithPassword({
+            email,
+            password,
+        })
+        if (error) throw error
+        document.getElementById('auth-modal').classList.add('hidden')
+        checkUser()
+    } catch (err) {
+        console.error('Login error:', err)
+        alert('Login failed: ' + err.message)
+    } finally {
+        hideLoader();
+    }
+}
+
+// Update the signUpWithEmail function
+const signUpWithEmail = async (email, password) => {
+    showLoader();
+    try {
+        const { data, error } = await supabaseInstance.auth.signUp({
+            email,
+            password,
+        })
+        if (error) throw error
+        alert('Check your email for verification link!')
+        document.getElementById('auth-modal').classList.add('hidden')
+    } catch (err) {
+        console.error('Signup error:', err)
+        alert('Signup failed: ' + err.message)
+    } finally {
+        hideLoader();
+    }
+}
 
 
