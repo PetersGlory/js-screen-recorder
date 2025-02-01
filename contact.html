@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contact Us - FlickCast</title>
     <link rel="stylesheet" href="./dist/main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="./dist/main.js"></script>
     <style>
         /* Reuse your existing styles */
         .sidebar {
@@ -58,6 +60,22 @@
             .main-content {
                 margin-left: 0;
             }
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: #2DD4BF;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -172,5 +190,10 @@
             </div>
         </div>
     </main>
+
+    <!-- Add right after body tag -->
+    <div id="global-loader" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="loader"></div>
+    </div>
 </body>
 </html> 
