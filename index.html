@@ -312,19 +312,37 @@
       <section id="recording-section" class="max-w-4xl mx-auto">
         <h2 class="text-2xl font-bold mb-6">Screen Recording</h2>
 
+        <div class="recording-info bg-gray-800 p-4 rounded-lg mb-4">
+            <h3 class="text-lg font-semibold mb-2">Device Compatibility</h3>
+            <p class="text-gray-300">
+                💻 Desktop: Full screen recording supported<br>
+                📱 Mobile: Currently not supported (use native screen recording)
+            </p>
+        </div>
+
         <video
           src=""
           autoplay
-          class="video-feedback bg-black w-full h-auto rounded-lg mb-8"
+          class="video-feedback bg-black w-full rounded-lg mb-8"
+          style="aspect-ratio: 16/9;"
         ></video>
 
         <div class="flex gap-4 mb-8">
-          <button class="start-recording text-sm btn-primary flex-1">
+          <button class="start-recording btn-primary">
             Start Recording
           </button>
-          <button class="stop-recording text-sm btn-primary flex-1" disabled>
+          <button class="stop-recording btn-primary hidden">
             Stop Recording
           </button>
+        </div>
+
+        <div class="recorded-video-container hidden">
+          <video
+            src=""
+            controls
+            class="recorded-video bg-black w-full rounded-lg mb-8"
+            style="aspect-ratio: 16/9;"
+          ></video>
         </div>
 
         <div class="recorded-video-wrap hidden">
@@ -334,7 +352,8 @@
           <video
             src=""
             controls
-            class="recorded-video bg-black mb-4 w-full h-auto"
+            class="recorded-video bg-black w-full rounded-lg mb-8"
+            style="aspect-ratio: 16/9;"
           ></video>
 
           <div class="flex justify-center items-center -mx-4">

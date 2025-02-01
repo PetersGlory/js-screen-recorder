@@ -114,27 +114,61 @@ authButton.addEventListener('click', () => {
     authModal.classList.toggle('hidden')
 })
 
-// Enhanced setupStream with browser checks
+// Add this function to check device compatibility
+const checkDeviceCompatibility = () => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const recordButton = document.querySelector('.start-recording');
+    
+    if (isMobile) {
+        recordButton?.setAttribute('disabled', 'true');
+        recordButton?.classList.add('opacity-50', 'cursor-not-allowed');
+        
+        // Add warning message
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'bg-red-500 text-white p-4 rounded-lg mb-4';
+        warningDiv.innerHTML = `
+            <p class="font-bold">Device Not Supported</p>
+            <p>Screen recording is currently not supported on mobile browsers. Please use a desktop browser for this feature.</p>
+        `;
+        
+        document.querySelector('#recording-section')?.insertBefore(
+            warningDiv,
+            document.querySelector('.video-feedback')
+        );
+    }
+};
+
+// Update setupStream function to handle screen dimensions
 const setupStream = async () => {
     showLoader();
-  try {
+    try {
+        // Check if mobile device
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            throw new Error('Screen recording is not supported on mobile browsers. Please use a desktop browser.');
+        }
+
         if (!navigator.mediaDevices?.getDisplayMedia) {
             throw new Error('Screen recording not supported in this browser');
         }
 
-      stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { frameRate: 30 }
-      });
+        // Request full screen dimensions
+        stream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+                frameRate: 30,
+                width: { ideal: screen.width },
+                height: { ideal: screen.height }
+            }
+        });
 
-      audio = await navigator.mediaDevices.getUserMedia({
-          audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 44100
-          }
-      });
+        audio = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 44100
+            }
+        });
 
-      setupVideoFeedback();
+        setupVideoFeedback();
     } catch (err) {
         alert(`Error: ${err.message}`);
     } finally {
@@ -142,13 +176,26 @@ const setupStream = async () => {
     }
 };
 
+// Update setupVideoFeedback to maintain aspect ratio
 const setupVideoFeedback = () => {
     if (stream) {
         const video = document.querySelector('.video-feedback');
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
+        
+        // Set video element dimensions to match source
+        video.style.width = '100%';
+        video.style.maxWidth = '100%';
+        video.style.height = 'auto';
+        
+        // Set proper aspect ratio
+        const aspectRatio = settings.width / settings.height;
+        video.style.aspectRatio = `${aspectRatio}`;
+        
         video.srcObject = stream;
         video.play();
     } else {
-        console.warn("no stream variable")
+        console.warn("no stream variable");
     }
 }
 
@@ -274,70 +321,56 @@ const addWatermark = (stream) => {
     return new MediaStream([generator, ...stream.getAudioTracks()]);
 };
 
-// Modified startRecording
+// Update startRecording function
 const startRecording = async () => {
-    await setupStream();
-    if (!stream) return;
+    try {
+        // Setup stream first
+        await setupStream();
+        if (!stream) return;
 
-    const processedStream = addWatermark(stream);
-    mixedStream = new MediaStream([
-        ...processedStream.getTracks(),
-        ...audio.getTracks()
-    ]);
+        // Get video track settings for dimensions
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
 
-    recorder = new MediaRecorder(mixedStream, {
-        mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 2500000
-    });
+        // Create mixed stream with proper dimensions
+        mixedStream = new MediaStream([...stream.getTracks(), ...audio.getTracks()]);
+        
+        recorder = new MediaRecorder(mixedStream, {
+            mimeType: 'video/webm;codecs=vp8,opus',
+            videoBitsPerSecond: 2500000, // 2.5 Mbps for better quality
+        });
 
-        recorder.ondataavailable = handleDataAvailable;
-        recorder.onstop = handleStop;
-        recorder.start(200);
+        recorder.ondataavailable = (e) => chunks.push(e.data);
+        recorder.onstop = async () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            chunks = [];
+            
+            const video = document.querySelector('.recorded-video');
+            video.src = URL.createObjectURL(blob);
+            video.style.width = '100%';
+            video.style.maxWidth = '100%';
+            video.style.height = 'auto';
+            video.style.aspectRatio = `${settings.width / settings.height}`;
+            
+            currentBlob = blob;
+            
+            // Clean up
+            stream.getTracks().forEach(track => track.stop());
+            audio.getTracks().forEach(track => track.stop());
+        };
 
-        startButton.disabled = true;
-    stopButton.disabled = false;
+        recorder.start();
+        startButton.classList.add('hidden');
+        stopButton.classList.remove('hidden');
 
-    if (!isPremiumUser) {
-        startRecordingTimer();
+        // Start timer for non-premium users
+        if (!isPremiumUser) {
+            startRecordingTimer();
+        }
+    } catch (err) {
+        console.error('Error starting recording:', err);
+        alert('Failed to start recording: ' + err.message);
     }
-
-    console.log('recording started');
-};
-
-const handleDataAvailable = (e) => {
-    chunks.push(e.data);
-}
-
-const handleStop = () => {
-    const blob = new Blob(chunks, { 
-        type: "video/webm; codecs=vp9" // Update MIME type to match recording
-    });
-    chunks = [];
-    currentBlob = blob;
-
-    const url = URL.createObjectURL(blob);
-    downloadButton.href = url;
-    downloadButton.download = 'video.webm'; // Change extension to match format
-    downloadButton.disabled = false;
-
-    recordedVideo.src = url;
-    recordedVideo.load();
-    recordedVideo.onloadeddata = () => {
-        recordedVideo.play();
-        const rc = document.querySelector(".recorded-video-wrap");
-        rc.classList.remove("hidden");
-        document.querySelector('.edit-tools').classList.remove('hidden');
-        rc.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-    if (audio) {
-        audio.getTracks().forEach(track => track.stop());
-    }
-
-    console.log('recording ready');
 };
 
 // Recording time limit
@@ -354,12 +387,19 @@ const startRecordingTimer = () => {
     }, 1000);
 };
 
+// Update stopRecording function
 const stopRecording = () => {
-    if (recordingTimer) clearInterval(recordingTimer);
-    recorder.stop();
-    startButton.disabled = false;
-    stopButton.disabled = true;
-    console.log("Video stopped");
+    try {
+        if (recordingTimer) clearInterval(recordingTimer);
+        if (recorder && recorder.state !== 'inactive') {
+            recorder.stop();
+            startButton.classList.remove('hidden');
+            stopButton.classList.add('hidden');
+        }
+    } catch (err) {
+        console.error('Error stopping recording:', err);
+        alert('Failed to stop recording: ' + err.message);
+    }
 };
 
 // Ad initialization
@@ -406,6 +446,9 @@ window.addEventListener('load', () => {
         paystackButton.onclick = () => paystackHandler('basic_plan');
         document.querySelector('.absolute.top-4.right-4').appendChild(paystackButton);
     }
+
+    // Existing code...
+    checkDeviceCompatibility();
 });
 
 // Subscription management
