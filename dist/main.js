@@ -324,6 +324,7 @@ const addWatermark = (stream) => {
 // Update startRecording function
 const startRecording = async () => {
     try {
+        checkUser();
         // Setup stream first
         await setupStream();
         if (!stream) return;
