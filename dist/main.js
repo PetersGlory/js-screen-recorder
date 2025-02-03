@@ -515,36 +515,61 @@ const saveToCloud = async () => {
     
     showLoader()
     try {
-        const fileName = `recordings/${user.id}/${Date.now()}.webm`
-        const { error: uploadError } = await supabaseInstance.storage
+        // Check file size
+        const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+        if (currentBlob.size > MAX_FILE_SIZE) {
+            throw new Error('File size exceeds 50MB limit');
+        }
+
+        // Create a unique filename
+        const timestamp = Date.now();
+        const fileName = `recordings/${user.id}/${timestamp}.webm`;
+
+        // Upload with content-type header
+        const { error: uploadError, data } = await supabaseInstance.storage
             .from('recordings')
-            .upload(fileName, currentBlob)
+            .upload(fileName, currentBlob, {
+                contentType: 'video/webm',
+                cacheControl: '3600',
+                upsert: false
+            });
             
-        if (uploadError) throw uploadError
+        if (uploadError) throw uploadError;
         
+        // Get public URL
         const { data: { publicUrl } } = supabaseInstance.storage
             .from('recordings')
-            .getPublicUrl(fileName)
+            .getPublicUrl(fileName);
             
+        // Save record to database
         const { error: dbError } = await supabaseInstance
             .from('recordings')
             .insert({
                 user_id: user.id,
                 url: publicUrl,
                 duration: recordedVideo.duration,
-                created_at: new Date().toISOString()
-            })
+                created_at: new Date().toISOString(),
+                file_name: fileName,
+                file_size: currentBlob.size
+            });
             
-        if (dbError) throw dbError
+        if (dbError) throw dbError;
         
-        alert('Recording saved successfully!')
-        loadDashboard()
+        alert('Recording saved successfully!');
+        loadDashboard();
     } catch (err) {
-        alert('Error saving recording: ' + err.message)
+        console.error('Upload error:', err);
+        if (err.message.includes('size')) {
+            alert('Error: File size exceeds 50MB limit. Try trimming the video or exporting at a lower quality.');
+        } else if (err.statusCode === 413) {
+            alert('Error: File too large for upload. Try trimming the video or exporting at a lower quality.');
+        } else {
+            alert('Error saving recording: ' + err.message);
+        }
     } finally {
-        hideLoader()
+        hideLoader();
     }
-}
+};
 
 // Add this helper function for copying share link
 const copyShareLink = () => {
@@ -564,10 +589,22 @@ const generateShareLink = async () => {
 
     showLoader();
     try {
-        const fileName = `shared/${user.id}/${Date.now()}.webm`;
-        const { error: uploadError } = await supabaseInstance.storage
+        // Check file size
+        const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+        if (blobToShare.size > MAX_FILE_SIZE) {
+            throw new Error('File size exceeds 50MB limit');
+        }
+
+        const timestamp = Date.now();
+        const fileName = `shared/${user.id}/${timestamp}.webm`;
+        
+        const { error: uploadError, data } = await supabaseInstance.storage
             .from('recordings')
-            .upload(fileName, blobToShare);
+            .upload(fileName, blobToShare, {
+                contentType: 'video/webm',
+                cacheControl: '3600',
+                upsert: false
+            });
             
         if (uploadError) throw uploadError;
         
@@ -580,7 +617,14 @@ const generateShareLink = async () => {
         shareUrl.value = publicUrl;
         shareLink.classList.remove('hidden');
     } catch (err) {
-        alert('Sharing failed: ' + err.message);
+        console.error('Share error:', err);
+        if (err.message.includes('size')) {
+            alert('Error: File size exceeds 50MB limit. Try trimming the video or exporting at a lower quality.');
+        } else if (err.statusCode === 413) {
+            alert('Error: File too large for upload. Try trimming the video or exporting at a lower quality.');
+        } else {
+            alert('Sharing failed: ' + err.message);
+        }
     } finally {
         hideLoader();
     }
